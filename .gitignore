@@ -1,6 +1,4 @@
 build
-CMakeLists.txt
-CMakePresets
 mx.scratch
 !.settings
 Keil Legacy/

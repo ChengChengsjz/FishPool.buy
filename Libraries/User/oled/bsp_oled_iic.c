@@ -37,7 +37,7 @@ void fill_picture(unsigned char fill_Data);    // 全屏填充统一数据（用
 
 
 /* 函数申明 -----------------------------------------------*/
-extern void delay_us(unsigned int nus);  
+/* extern void delay_us(unsigned int nus); */
 /* 变量定义 ----------------------------------------------*/
 
 
