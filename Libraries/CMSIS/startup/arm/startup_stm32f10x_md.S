@@ -136,8 +136,8 @@ Reset_Handler:
     /* Call SystemInit */
     ldr r0, =SystemInit
     blx r0
-    /* Jump to __main */
-    ldr r0, =__main
+    /* Jump to main */
+    ldr r0, =main
     bx r0
 .size Reset_Handler, . - Reset_Handler
 

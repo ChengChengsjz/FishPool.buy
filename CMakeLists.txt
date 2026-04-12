@@ -172,6 +172,7 @@ target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
     -u _printf_float # STDIO float formatting support (remove if not used)
     --specs=nosys.specs
     -Wl,--start-group
+    -lgcc
     -lc
     -lm
     -lstdc++
