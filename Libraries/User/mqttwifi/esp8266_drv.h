@@ -1,94 +1,94 @@
-#ifndef _ESP8266_DRV_H_
-#define _ESP8266_DRV_H_
-
-#include "sys.h"
-
-#define ID   "abcd" //ÈÈµãÕËºÅ                    
-#define PASSWORD   "12345678" //ÈÈµãÃÜÂë
-
-#define ESP8266_RESET_LCK        RCC_APB2Periph_GPIOA
-#define ESP8266_RESET_PORT       GPIOA
-#define ESP8266_RESET_PIN        GPIO_Pin_1
-
-#define ESP8266_RESET_SET_H     GPIO_SetBits(ESP8266_RESET_PORT, ESP8266_RESET_PIN)  //HAL_GPIO_WritePin(ESP8266_RESET_PORT,ESP8266_RESET_PIN,x)
-#define ESP8266_RESET_SET_L     GPIO_ResetBits(ESP8266_RESET_PORT, ESP8266_RESET_PIN)
-typedef struct
-{
-
-    unsigned int rcv_trick_ms;
-    unsigned char buff[256];
-    unsigned int rcv_cnt;
-
-} DATA_RCV_STR;
-
-typedef struct
-{
-
-    unsigned char Net_stu;      //ÍøÂç×´Ì¬
-    unsigned char Cmd_stu;      //ÃüÁî×´Ì¬
-    unsigned int cmd_send_trick;    //Ö¸Áî·¢ËÍÊ±¼ä
-    unsigned char retry_cnt;
-    unsigned char run_heart;            //ÔËĞĞ´ÎÊı
-    unsigned short rcv_idle_cnt;        //µ¥Î»s
-    unsigned char offline_cnt;          //ÀëÏß´ÎÊı
-    unsigned char MQTT_Connect_flag;
-} ESP8266_STR;
-
-typedef struct
-{
-
-    char cmd[80];
-    char respond[20];
-    unsigned short wait_time;
-    unsigned short retry_cnt;
-
-} CMD_TYPE_STRUCT;
-
-typedef enum
-{
-    NET_NULL = 0,
-    NET_RESET,
-    NET_AT,
-    NET_RST,
-    NET_CWAUTOCONN,
-    NET_CAJAP,
-    NET_CIPMUX,
-    NET_CIPMODE,
-    NET_CIPSTART,
-    NET_CIPSEND,
-
-
-} ESP8266_NET_STU;
-
-//MQTTÁ¬½Ó²ÎÊı½á¹¹Ìå
-typedef struct
-{
-    uint32_t device_id;
-    unsigned int Round_num;//Ëæ»úÊı
-    char device_name[20];//DEVICENAME
-    char key[20];			//PRODUCTKEY
-    char secre[20];		//DEVICESECRE
-    char sub[20];     //SUBSCRIBE_TOPIC
-    char pub[20];     //P_TOPIC_NAME
-
-} STR_MQTT_INFO;
-
-
-extern STR_MQTT_INFO strMqtt_Inof;
-
-unsigned int get_sys_tick(void);
-void send_data_to_dev(char *data, unsigned short len);
-void USART_rcv_ch(unsigned char ch, DATA_RCV_STR *str_rcv);
-void ESP8266_run_handle(void);
-void USARTx_RCVHandler(USART_TypeDef *USARTX);
-extern ESP8266_STR strEsp8266_info;
-extern DATA_RCV_STR strEsp8266_rcv;      //µ÷ÊÔ´®¿Ú½ÓÊÕ
-
-unsigned int get_round_num(void);//Éú³ÉËæ»úÊıµÄº¯Êı
-void Mqtt_Parameter_init(void);//MQTTÁ¬½Ó²ÎÊı
-void WIFI_RESET_init(void);//WIFI¸´Î»Òı½Å³õÊ¼»¯
-void MqttCon_Display(void);//ÏÔÊ¾Á¬½Ó²ÎÊı
-void Topic_Display(void);//ÏÔÊ¾¶©ÔÄÖ÷Ìâ
-void mqttPublic(void);//Ïòmqtt·şÎñÆ÷·¢ËÍÊı¾İ
-void Scheduled (void);//¶¨Ê±1Ãë·¢ËÍÒ»´Î
-#endif
+#ifndef _ESP8266_DRV_H_
+#define _ESP8266_DRV_H_
+
+#include "sys.h"
+
+#define ID   "abcd" //çƒ­ç‚¹è´¦å·                    
+#define PASSWORD   "12345678" //çƒ­ç‚¹å¯†ç 
+
+#define ESP8266_RESET_LCK        RCC_APB2Periph_GPIOA
+#define ESP8266_RESET_PORT       GPIOA
+#define ESP8266_RESET_PIN        GPIO_Pin_1
+
+#define ESP8266_RESET_SET_H     GPIO_SetBits(ESP8266_RESET_PORT, ESP8266_RESET_PIN)  //HAL_GPIO_WritePin(ESP8266_RESET_PORT,ESP8266_RESET_PIN,x)
+#define ESP8266_RESET_SET_L     GPIO_ResetBits(ESP8266_RESET_PORT, ESP8266_RESET_PIN)
+typedef struct
+{
+
+    unsigned int rcv_trick_ms;
+    unsigned char buff[256];
+    unsigned int rcv_cnt;
+
+} DATA_RCV_STR;
+
+typedef struct
+{
+
+    unsigned char Net_stu;      //ç½‘ç»œçŠ¶æ€
+    unsigned char Cmd_stu;      //å‘½ä»¤çŠ¶æ€
+    unsigned int cmd_send_trick;    //æŒ‡ä»¤å‘é€æ—¶é—´
+    unsigned char retry_cnt;
+    unsigned char run_heart;            //è¿è¡Œæ¬¡æ•°
+    unsigned short rcv_idle_cnt;        //å•ä½s
+    unsigned char offline_cnt;          //ç¦»çº¿æ¬¡æ•°
+    unsigned char MQTT_Connect_flag;
+} ESP8266_STR;
+
+typedef struct
+{
+
+    char cmd[80];
+    char respond[20];
+    unsigned short wait_time;
+    unsigned short retry_cnt;
+
+} CMD_TYPE_STRUCT;
+
+typedef enum
+{
+    NET_NULL = 0,
+    NET_RESET,
+    NET_AT,
+    NET_RST,
+    NET_CWAUTOCONN,
+    NET_CAJAP,
+    NET_CIPMUX,
+    NET_CIPMODE,
+    NET_CIPSTART,
+    NET_CIPSEND,
+
+
+} ESP8266_NET_STU;
+
+//MQTTè¿æ¥å‚æ•°ç»“æ„ä½“
+typedef struct
+{
+    uint32_t device_id;
+    unsigned int Round_num;//éšæœºæ•°
+    char device_name[20];//DEVICENAME
+    char key[20];			//PRODUCTKEY
+    char secre[20];		//DEVICESECRE
+    char sub[20];     //SUBSCRIBE_TOPIC
+    char pub[20];     //P_TOPIC_NAME
+
+} STR_MQTT_INFO;
+
+
+extern STR_MQTT_INFO strMqtt_Inof;
+
+unsigned int get_sys_tick(void);
+void send_data_to_dev(char *data, unsigned short len);
+void USART_rcv_ch(unsigned char ch, DATA_RCV_STR *str_rcv);
+void ESP8266_run_handle(void);
+void USARTx_RCVHandler(USART_TypeDef *USARTX);
+extern ESP8266_STR strEsp8266_info;
+extern DATA_RCV_STR strEsp8266_rcv;      //è°ƒè¯•ä¸²å£æ¥æ”¶
+
+unsigned int get_round_num(void);//ç”Ÿæˆéšæœºæ•°çš„å‡½æ•°
+void Mqtt_Parameter_init(void);//MQTTè¿æ¥å‚æ•°
+void WIFI_RESET_init(void);//WIFIå¤ä½å¼•è„šåˆå§‹åŒ–
+void MqttCon_Display(void);//æ˜¾ç¤ºè¿æ¥å‚æ•°
+void Topic_Display(void);//æ˜¾ç¤ºè®¢é˜…ä¸»é¢˜
+void mqttPublic(void);//å‘mqttæœåŠ¡å™¨å‘é€æ•°æ®
+void Scheduled (void);//å®šæ—¶1ç§’å‘é€ä¸€æ¬¡
+#endif
