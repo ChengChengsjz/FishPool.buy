@@ -1,0 +1,514 @@
+#include "sys.h"
+
+//模式切换标志位
+uint8_t mode_selection = 0;
+//页面显示的标志位
+uint8_t displayFlag = 0;
+//阈值设置标志位
+uint8_t thresholdFlag = 0;
+//手动模式标志位
+uint8_t  manualFlag = 0;
+
+
+/*****************贯穿整个系统的函数 在主函数只需要调用这一个函数*/
+
+void Mode_selection(void)
+{
+    //调用执行设备函数 此函数不能删除
+    Action();
+
+    //按键1 按下模式切换
+    if (isKey1) {
+        isKey1 = 0;
+        mode_selection++;
+        oled_Clear();
+    }
+
+    //标志位限位
+    if (mode_selection >= 3) {
+        mode_selection = 0;
+    }
+
+    //根据标志位判断进入哪一个模式  手动模式下不调用自动控制函数其余可以调用
+    switch (mode_selection) {
+    case 0:
+        Display();
+        Automatic();
+        break;
+
+    case 1:
+        Threshold_Settings();
+        Automatic();
+        break;
+
+    case 2:
+        Manual();
+        break;
+    }
+}
+
+
+
+/****
+自动控制逻辑判断
+****/
+void Automatic(void)
+{
+    if (SensorData.Sensor1 >= Threshold.Threshold1) {
+        System.Execute1 = 1;
+    } else {
+        System.Execute1 = 0;
+    }
+
+    if (SensorData.Sensor2 >= Threshold.Threshold2) {
+        System.Execute2 = 2;
+    } else {
+        System.Execute2 = 0;
+    }
+
+    if (SensorData.Sensor3 >= Threshold.Threshold3) {
+        System.Execute3 = 1;
+    } else {
+        System.Execute3 = 0;
+    }
+
+    if (SensorData.Sensor4 >= Threshold.Threshold4) {
+        System.Execute4 = 1;
+    } else {
+        System.Execute4 = 0;
+    }
+}
+/****
+根据执行设备的标志位来开关执行设备
+****/
+void Action(void)
+{
+    if (System.Execute1 == 1) {
+        RELAY_1_ON;
+    } else {
+        RELAY_1_OFF;
+    }
+
+    if (System.Execute2 == 1) {
+        RELAY_2_ON;
+    } else {
+        RELAY_2_OFF;
+    }
+
+    if (System.Execute3 == 1) {
+        RELAY_3_ON;
+    } else {
+        RELAY_3_OFF;
+    }
+
+    if (System.Execute4 == 1) {
+        LED_ON;
+        Buzzer_ON;
+			Control_SG90(2500);
+    } else {
+        LED_OFF;
+        Buzzer_OFF;
+						Control_SG90(500);
+    }
+}
+/****
+传感器数据显示
+****/
+
+void Display(void)
+{
+    //一个页面显示不完 按下按键2切换显示
+    if (isKey2)  {
+        isKey2 = 0;
+        displayFlag = !displayFlag;
+        oled_Clear();
+    }
+
+    //第一个页面
+    if (displayFlag == 0) {
+        //标题
+        oled_ShowCHinese(16 * 2, 2 * 0, 38);
+        oled_ShowCHinese(16 * 3, 2 * 0, 39);
+        oled_ShowCHinese(16 * 4, 2 * 0, 40);
+        oled_ShowCHinese(16 * 5, 2 * 0, 41);
+        //温度
+        oled_ShowCHinese(16 * 0, 2 * 1, 0);
+        oled_ShowCHinese(16 * 1, 2 * 1, 1);
+        oled_ShowString(16 * 4, 2 * 1, ":", 16);
+        oled_ShowNum(16 * 5, 2 * 1, SensorData.Sensor1, 2, 16);
+        //湿度
+        oled_ShowCHinese(16 * 0, 2 * 2, 2);
+        oled_ShowCHinese(16 * 1, 2 * 2, 3);
+        oled_ShowString(16 * 4, 2 * 2, ":", 16);
+        oled_ShowNum(16 * 5, 2 * 2, SensorData.Sensor2, 2, 16);
+        //烟雾浓度
+        oled_ShowCHinese(16 * 0, 2 * 3, 4);
+        oled_ShowCHinese(16 * 1, 2 * 3, 5);
+        oled_ShowCHinese(16 * 2, 2 * 3, 6);
+        oled_ShowCHinese(16 * 3, 2 * 3, 7);
+        oled_ShowString(16 * 4, 2 * 3, ":", 16);
+        oled_ShowNum(16 * 5, 2 * 3, SensorData.Sensor3, 2, 16);
+    }
+
+    //第二个页面
+    if (displayFlag == 1) {
+        //光照强度
+        oled_ShowCHinese(16 * 0, 2 * 0, 8);
+        oled_ShowCHinese(16 * 1, 2 * 0, 9);
+        oled_ShowCHinese(16 * 2, 2 * 0, 10);
+        oled_ShowCHinese(16 * 3, 2 * 0, 11);
+        oled_ShowString(16 * 4, 2 * 0, ":", 16);
+        oled_ShowNum(16 * 5, 2 * 0, SensorData.Sensor4, 2, 16);
+        //甲醛含量
+        //        oled_ShowCHinese(16 * 0, 2 * 1, 12);
+        //        oled_ShowCHinese(16 * 1, 2 * 1, 13);
+        //        oled_ShowCHinese(16 * 2, 2 * 1, 14);
+        //        oled_ShowCHinese(16 * 3, 2 * 1, 15);
+        //        oled_ShowString(16 * 4, 2 * 1, ":", 16);
+        //        oled_ShowNum(16 * 5, 2 * 1, SensorData.Sensor5, 2, 16);
+        //        //水位
+        //        oled_ShowCHinese(16 * 0, 2 * 2, 16);
+        //        oled_ShowCHinese(16 * 1, 2 * 2, 17);
+        //        oled_ShowString(16 * 4, 2 * 2, ":", 16);
+        //        oled_ShowNum(16 * 5, 2 * 2, SensorData.Sensor6, 2, 16);
+        //        //浊度
+        //        oled_ShowCHinese(16 * 0, 2 * 3, 18);
+        //        oled_ShowCHinese(16 * 1, 2 * 3, 19);
+        //        oled_ShowString(16 * 4, 2 * 3, ":", 16);
+        //        oled_ShowNum(16 * 5, 2 * 3, SensorData.Sensor1, 2, 16);
+    }
+}
+
+
+
+
+
+
+
+/****
+阈值设置
+****/
+
+void Threshold_Settings(void)
+{
+    //按键2按下选中设置阈值
+    if (isKey2) {
+        isKey2 = 0;
+        thresholdFlag++;
+
+        //限位标志 总数-1
+        if (thresholdFlag >= 4) {
+            thresholdFlag = 0;
+        }
+
+        //翻页时清屏
+        if (thresholdFlag == 3 || thresholdFlag == 0) {
+            oled_Clear();
+        }
+    }
+
+    //调用光标显示函数
+    Asterisk(thresholdFlag);
+
+    //按键3按下阈值加
+    if (isKey3) {
+        isKey3 = 0;
+
+        switch (thresholdFlag) {
+        case 0:
+            Threshold.Threshold1++;
+            break;
+
+        case 1:
+            Threshold.Threshold2++;
+            break;
+
+        case 2:
+            Threshold.Threshold3++;
+            break;
+
+        case 3:
+            Threshold.Threshold4++;
+            break;
+            //        case 4:
+            //            Threshold.Threshold1++;
+            //            break;
+            //        case 5:
+            //            Threshold.Threshold1++;
+            //            break;
+            //        case 6:
+            //            Threshold.Threshold1++;
+            //            break;
+        }
+    }
+
+    //按键4按下阈值减
+    if (isKey4) {
+        isKey4 = 0;
+
+        switch (thresholdFlag) {
+        case 0:
+            Threshold.Threshold1--;
+            break;
+
+        case 1:
+            Threshold.Threshold2--;
+            break;
+
+        case 2:
+            Threshold.Threshold3--;
+            break;
+
+        case 3:
+            Threshold.Threshold4--;
+            break;
+            //        case 4:
+            //            Threshold.Threshold1--;
+            //            break;
+            //        case 5:
+            //            Threshold.Threshold1--;
+            //            break;
+            //        case 6:
+            //            Threshold.Threshold1--;
+            //            break;
+        }
+    }
+
+    //按键4按下阈值减
+
+    //如果标志位小于4 显示第一页
+    if (thresholdFlag < 3) {
+        oled_ShowString(16 * 2, 2 * 0, "Threshold", 16);
+        //温度
+        oled_ShowCHinese(16 * 0, 2 * 1, 0);
+        oled_ShowCHinese(16 * 1, 2 * 1, 1);
+        oled_ShowCHinese(16 * 2, 2 * 1, 20);
+        oled_ShowCHinese(16 * 3, 2 * 1, 21);
+        oled_ShowString(16 * 4, 2 * 1, ":", 16);
+        oled_ShowNum(16 * 5, 2 * 1, Threshold.Threshold1, 2, 16);
+        //湿度
+        oled_ShowCHinese(16 * 0, 2 * 2, 2);
+        oled_ShowCHinese(16 * 1, 2 * 2, 3);
+        oled_ShowCHinese(16 * 2, 2 * 2, 20);
+        oled_ShowCHinese(16 * 3, 2 * 2, 21);
+        oled_ShowString(16 * 4, 2 * 2, ":", 16);
+        oled_ShowNum(16 * 5, 2 * 2, Threshold.Threshold2, 2, 16);
+        //烟雾浓度
+        oled_ShowCHinese(16 * 0, 2 * 3, 4);
+        oled_ShowCHinese(16 * 1, 2 * 3, 5);
+        oled_ShowCHinese(16 * 2, 2 * 3, 20);
+        oled_ShowCHinese(16 * 3, 2 * 3, 21);
+        oled_ShowString(16 * 4, 2 * 3, ":", 16);
+        oled_ShowNum(16 * 5, 2 * 3, Threshold.Threshold3, 2, 16);
+    }
+    //如果大于等于3显示第二个页面
+    else {
+        //光照强度
+        oled_ShowCHinese(16 * 0, 2 * 0, 8);
+        oled_ShowCHinese(16 * 1, 2 * 0, 9);
+        oled_ShowCHinese(16 * 2, 2 * 0, 20);
+        oled_ShowCHinese(16 * 3, 2 * 0, 21);
+        oled_ShowString(16 * 4, 2 * 0, ":", 16);
+        oled_ShowNum(16 * 5, 2 * 0, Threshold.Threshold4, 2, 16);
+        //甲醛含量
+        //        oled_ShowCHinese(16 * 0, 2 * 1, 12);
+        //        oled_ShowCHinese(16 * 1, 2 * 1, 13);
+        //        oled_ShowCHinese(16 * 2, 2 * 1, 20);
+        //        oled_ShowCHinese(16 * 3, 2 * 1, 21);
+        //        oled_ShowString(16 * 4, 2 * 1, ":", 16);
+        //        oled_ShowNum(16 * 5, 2 * 1, Threshold.Threshold1, 2, 16);
+        //        //水位
+        //        oled_ShowCHinese(16 * 0, 2 * 2, 16);
+        //        oled_ShowCHinese(16 * 1, 2 * 2, 17);
+        //        oled_ShowCHinese(16 * 2, 2 * 2, 20);
+        //        oled_ShowCHinese(16 * 3, 2 * 2, 21);
+        //        oled_ShowString(16 * 4, 2 * 2, ":", 16);
+        //        oled_ShowNum(16 * 5, 2 * 2, Threshold.Threshold1, 2, 16);
+        //        //浊度
+        //        oled_ShowCHinese(16 * 0, 2 * 3, 18);
+        //        oled_ShowCHinese(16 * 1, 2 * 3, 19);
+        //        oled_ShowCHinese(16 * 2, 2 * 3, 20);
+        //        oled_ShowCHinese(16 * 3, 2 * 3, 21);
+        //        oled_ShowString(16 * 4, 2 * 3, ":", 16);
+        //        oled_ShowNum(16 * 5, 2 * 3, Threshold.Threshold1, 2, 16);
+    }
+
+    if (Threshold.Threshold1 > 99) {
+        Threshold.Threshold1 = 0;
+    }
+
+    if (Threshold.Threshold2 > 99) {
+        Threshold.Threshold2 = 0;
+    }
+
+    if (Threshold.Threshold3 > 99) {
+        Threshold.Threshold3 = 0;
+    }
+
+    if (Threshold.Threshold3 > 99) {
+        Threshold.Threshold3 = 0;
+    }
+}
+
+/****
+手动模式
+****/
+
+void Manual(void)
+{
+    //按下按键2选中
+    if (isKey2) {
+        isKey2 = 0;
+        manualFlag++;
+
+        //限位
+        if (manualFlag >= 4) {
+            manualFlag = 0;
+        }
+
+        if (manualFlag == 3 || manualFlag == 0) {
+            oled_Clear();
+        }
+    }
+
+    //调用光标显示函数
+    Asterisk(manualFlag);
+    //按下按键3状态取反
+
+    if (isKey3) {
+        isKey3 = 0;
+
+        switch (manualFlag) {
+        case 0:
+            System.Execute1 = !System.Execute1;
+            break;
+
+        case 1:
+            System.Execute2 = !System.Execute2;
+            break;
+
+        case 2:
+            System.Execute3 = !System.Execute3;
+            break;
+
+        case 3:
+            System.Execute4 = !System.Execute4;
+            break;
+            //        case 4:
+            //            System.Execute1 = !System.Execute1;
+            //            break;
+            //        case 5:
+            //            System.Execute1 = !System.Execute1;
+            //            break;
+        }
+    }
+
+    //如果标志位小于3 显示第一页
+    if (manualFlag < 3) {
+        oled_ShowString(16 * 2, 2 * 0, "Execute", 16);
+        //风扇
+        oled_ShowCHinese(16 * 0, 2 * 1, 22);
+        oled_ShowCHinese(16 * 1, 2 * 1, 23);
+        oled_ShowString(16 * 2, 2 * 1, ":", 16);
+
+        if (System.Execute1 == 1) {
+            oled_ShowCHinese(16 * 3, 2 * 1, 34);
+            oled_ShowCHinese(16 * 4, 2 * 1, 35);
+        } else {
+            oled_ShowCHinese(16 * 3, 2 * 1, 36);
+            oled_ShowCHinese(16 * 4, 2 * 1, 37);
+        }
+
+        //水泵
+        oled_ShowCHinese(16 * 0, 2 * 2, 24);
+        oled_ShowCHinese(16 * 1, 2 * 2, 25);
+        oled_ShowString(16 * 2, 2 * 2, ":", 16);
+
+        if (System.Execute2 == 1) {
+            oled_ShowCHinese(16 * 3, 2 * 2, 34);
+            oled_ShowCHinese(16 * 4, 2 * 2, 35);
+        } else {
+            oled_ShowCHinese(16 * 3, 2 * 2, 36);
+            oled_ShowCHinese(16 * 4, 2 * 2, 37);
+        }
+
+        //加湿
+        oled_ShowCHinese(16 * 0, 2 * 3, 26);
+        oled_ShowCHinese(16 * 1, 2 * 3, 27);
+        oled_ShowString(16 * 2, 2 * 3, ":", 16);
+
+        if (System.Execute3 == 1) {
+            oled_ShowCHinese(16 * 3, 2 * 3, 34);
+            oled_ShowCHinese(16 * 4, 2 * 3, 35);
+        } else {
+            oled_ShowCHinese(16 * 3, 2 * 3, 36);
+            oled_ShowCHinese(16 * 4, 2 * 3, 37);
+        }
+    }
+    //标志位大于等于4 显示第二页
+    else {
+        //换水
+        oled_ShowCHinese(16 * 0, 2 * 0, 28);
+        oled_ShowCHinese(16 * 1, 2 * 0, 29);
+        oled_ShowString(16 * 2, 2 * 0, ":", 16);
+
+        if (System.Execute4 == 1) {
+            oled_ShowCHinese(16 * 3, 2 * 0, 34);
+            oled_ShowCHinese(16 * 4, 2 * 0, 35);
+        } else {
+            oled_ShowCHinese(16 * 3, 2 * 0, 36);
+            oled_ShowCHinese(16 * 4, 2 * 0, 37);
+        }
+
+        //        //报警
+        //        oled_ShowCHinese(16 * 0, 2 * 1, 30);
+        //        oled_ShowCHinese(16 * 1, 2 * 1, 31);
+        //        oled_ShowString(16 * 2, 2 * 1, ":", 16);
+        //        if (System.Execute1 == 1) {
+        //            oled_ShowCHinese(16 * 3, 2 * 1, 34);
+        //            oled_ShowCHinese(16 * 4, 2 * 1, 35);
+        //        } else {
+        //            oled_ShowCHinese(16 * 3, 2 * 1, 36);
+        //            oled_ShowCHinese(16 * 4, 2 * 1, 37);
+        //        }
+        //        //灯光
+        //        oled_ShowCHinese(16 * 0, 2 * 2, 32);
+        //        oled_ShowCHinese(16 * 1, 2 * 2, 33);
+        //        oled_ShowString(16 * 2, 2 * 2, ":", 16);
+        //        if (System.Execute1 == 1) {
+        //            oled_ShowCHinese(16 * 3, 2 * 2, 34);
+        //            oled_ShowCHinese(16 * 4, 2 * 2, 35);
+        //        } else {
+        //            oled_ShowCHinese(16 * 3, 2 * 2, 36);
+        //            oled_ShowCHinese(16 * 4, 2 * 2, 37);
+        //        }
+    }
+}
+
+//光标显示函数
+void Asterisk(uint8_t A)
+{
+    if (A == 3 || A == 7) {
+        oled_ShowString(16 * 7, 2 * 0, "*", 16);
+    } else {
+        oled_ShowString(16 * 7, 2 * 0, " ", 16);
+    }
+
+    if (A == 0 || A == 4) {
+        oled_ShowString(16 * 7, 2 * 1, "*", 16);
+    } else {
+        oled_ShowString(16 * 7, 2 * 1, " ", 16);
+    }
+
+    if (A == 1 || A == 5) {
+        oled_ShowString(16 * 7, 2 * 2, "*", 16);
+    } else {
+        oled_ShowString(16 * 7, 2 * 2, " ", 16);
+    }
+
+    if (A == 2 || A == 6) {
+        oled_ShowString(16 * 7, 2 * 3, "*", 16);
+    } else {
+        oled_ShowString(16 * 7, 2 * 3, " ", 16);
+    }
+}

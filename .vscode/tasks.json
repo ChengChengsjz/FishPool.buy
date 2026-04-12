@@ -1,0 +1,48 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Flash Program",
+            "type": "shell",
+            // 关键修改：直接依赖下面定义的构建任务标签
+            "dependsOn": "CMake: 生成", 
+            "command": "C:/Users/ChengCheng/AppData/Local/stm32cube/bundles/programmer/2.22.0+st.1/bin/STM32_Programmer_CLI.exe",
+            "args": [
+                "-c",
+                "port=SWD",
+                "mode=UR",
+                "-w",
+                "${workspaceFolder}/build/debug/FishPool_buy.elf",
+                "-rst"
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "runOptions": {
+                "reevaluateOnRerun": false
+            },
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "type": "cmake",
+            "label": "CMake: 生成",
+            "command": "build",
+            "targets": [
+                "all"
+            ],
+            "preset": "debug",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "detail": "CMake 模板 生成 任务"
+        }
+    ]
+}
