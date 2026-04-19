@@ -82,7 +82,7 @@ void My_USART2(void)
 
     /* USART参数配置 */
 
-    USART2_InitStrue.USART_BaudRate = 115200;        // 波特率115200
+    USART2_InitStrue.USART_BaudRate = 9600;          // 波特率9600（MN316模块）
 
     USART2_InitStrue.USART_HardwareFlowControl = USART_HardwareFlowControl_None; // 无硬件流控
 

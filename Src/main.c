@@ -23,16 +23,14 @@ int main(void)
     RELAY_GPIO_Config();//继电器GPIO配置
     DS18B20_Init();		//DS18B20温度传感器初始化
     SG90_Init();		//SG90舵机初始化
-    My_USART2();		//USART2初始化，用于ESP8266通信，波特率115200
-    WIFI_RESET_init();	//ESP8266复位引脚初始化
-    Ali_MsessageInit();	//阿里云消息初始化
+    My_USART2();		//USART2初始化，用于MN316通信，波特率9600
     TIM1_Int_Init(9999, 7199); //定时器1初始化，定时模式
     TIM2_Init(499, 7199);//定时器2初始化，定时扫描按键
     oled_Clear();		//OLED清屏
 
     /*******************************************/
     while (1) {
-        ESP8266_run_handle();//处理MQTT连接与通信
+        MN316_run_handle();//处理MN316连接与通信
         //采集水温
         read_ds18b20(&Watertemp);
         SensorData.WtrTempVal = (uint8_t)Watertemp;

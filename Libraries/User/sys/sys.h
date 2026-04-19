@@ -48,9 +48,7 @@
 
 #include "../my_usart/my_usart2.h" 	//USART串口驱动
 
-#include "../mqttwifi/esp8266_drv.h" //WiFi驱动
-
-#include "../mqttwifi/mqtt_drv.h" 	//MQTT驱动
+#include "../mn316/mn316_drv.h" 	//MN316 NB-IoT驱动
 
 
 
