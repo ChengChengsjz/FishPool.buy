@@ -20,16 +20,29 @@
 
 ### JSON 格式
 
+因 MN316 模块限制每次最多发送 3 个参数，设备将 5 个传感器参数分 **2 次 Publish** 上报：
+
+**第一包（3个参数）：Temperature, Humidity, Lightness**
+
 ```json
-{"id":"123","version":"1.0","params":{"Temperature":{"value":<水温>},"Humidity":{"value":<水位>}}}
+{"id":"123","version":"1.0","params":{"Temperature":{"value":<水温>},"Humidity":{"value":<水位>},"Lightness":{"value":<光照>}}}
+```
+
+**第二包（2个参数）：Turbidity, pHValue**
+
+```json
+{"id":"123","version":"1.0","params":{"Turbidity":{"value":<浊度>},"pHValue":{"value":<PH值>}}}
 ```
 
 ### 参数字段
 
-| 字段 | 说明 | 类型 | 取值范围 |
-|------|------|------|----------|
-| Temperature | 水温 | int (℃) | 0~100 |
-| Humidity | 水位 | int | 0~50 |
+| 字段 | 说明 | 类型 | 取值范围 | 分包 |
+|------|------|------|----------|------|
+| Temperature | 水温 | int (℃) | 0~100 | 第一包 |
+| Humidity | 水位 | int | 0~50 | 第一包 |
+| Lightness | 光照强度 | int (Lux) | 0~65535 | 第一包 |
+| Turbidity | 浊度 | int | 0~1200 | 第二包 |
+| pHValue | PH值 | float | 0.0~14.0 | 第二包 |
 
 > 字段名使用 Temperature/Humidity 以适配 OneNet 平台物模型定义，实际分别代表水温和水位。
 
@@ -159,7 +172,7 @@ AT+MQTTPUB="$sys/382J6WcAh6/MN316/thing/property/post",0,0,0,<长度>,<HEX数据
 
 | 类别 | 命令数量 |
 |------|----------|
-| 上行 JSON 参数 | 2 个（Temperature, Humidity） |
+| 上行 JSON 参数 | 5 个（Temperature/Humidity/Lightness + Turbidity/pHValue，分2包发送） |
 | 下行模式切换 | 4 个 |
 | 下行开关控制 | 14 个（7路 × ON/OFF） |
 | 下行阈值调整 | 12 个（6项 × +/-） |

@@ -188,18 +188,25 @@ void MN316_publish_sensor_data(void)
     char hex_buf[MN316_JSON_MAX_LEN * 2];
     char at_cmd[512];
     unsigned short hex_len, json_len;
-    int pub_topic_len = sizeof(MN316_PUB_TOPIC) - 1;
 
+    /* 第一包：Temperature, Humidity, Lightness (3个参数) */
     json_len = sprintf(json,
-                       "{\"id\":\"123\",\"version\":\"1.0\",\"params\":{\"Temperature\":{\"value\":%d},\"Humidity\":{\"value\":%d}}}",
-                       SensorData.WtrTempVal, SensorData.WtrLevelVal);
-
+                       "{\"id\":\"123\",\"version\":\"1.0\",\"params\":{\"Temperature\":{\"value\":%d},\"Humidity\":{\"value\":%d},\"Lightness\":{\"value\":%d}}}",
+                       SensorData.WtrTempVal, SensorData.WtrLevelVal, SensorData.LightVal);
     hex_len = ascii_to_hex((const unsigned char *)json, json_len, hex_buf);
-
     sprintf(at_cmd,
             "AT+MQTTPUB=\"$sys/382J6WcAh6/MN316/thing/property/post\",0,0,0,%d,%s\r\n",
             json_len, hex_buf);
+    send_data_to_dev(at_cmd, strlen(at_cmd));
 
+    /* 第二包：Turbidity, pHValue (2个参数) */
+    json_len = sprintf(json,
+                       "{\"id\":\"123\",\"version\":\"1.0\",\"params\":{\"Turbidity\":{\"value\":%d},\"pHValue\":{\"value\":%.1f}}}",
+                       SensorData.TurbVal, SensorData.PHVal);
+    hex_len = ascii_to_hex((const unsigned char *)json, json_len, hex_buf);
+    sprintf(at_cmd,
+            "AT+MQTTPUB=\"$sys/382J6WcAh6/MN316/thing/property/post\",0,0,0,%d,%s\r\n",
+            json_len, hex_buf);
     send_data_to_dev(at_cmd, strlen(at_cmd));
 }
 
