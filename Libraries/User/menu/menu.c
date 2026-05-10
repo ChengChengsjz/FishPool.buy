@@ -310,12 +310,12 @@ void Display(void)
 	
 	//MQTT连接显示
 	if(displayFlag == 2){
-		MqttCon_Display();
+		// MqttCon_Display(); /* removed: MN316 uses fixed device name */
 	}
 	
 	//调用显示订阅主题的参数
 	if(displayFlag == 3){
-		Topic_Display();
+		// Topic_Display(); /* removed: MN316 uses fixed topic */
 	}
 }
 

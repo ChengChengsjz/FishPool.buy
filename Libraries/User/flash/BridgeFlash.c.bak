@@ -25,6 +25,7 @@ void BdgFlashInit(void)
     FLASH_ClearFlag(FLASH_FLAG_EOP | FLASH_FLAG_PGERR | FLASH_FLAG_WRPRTERR); // 清除状态标志
     FLASH_Lock();    // 重新上锁FLASH
     read_config();    // 从FLASH读取配置信息
+	Mqtt_Parameter_init();  // 初始化MQTT参数
     Threshold_Init(); // 初始化传感器阈值
 }
 
@@ -176,11 +177,16 @@ void Threshold_Init(void)
 		strConfig_info.is_config = FLASH_FLAG_READY;
 		memcpy((unsigned char *)&strConfig_info.config_buff[0],
 			(unsigned char *)&Threshold, sizeof(Threshold));
+		memcpy((unsigned char *)&strConfig_info.config_buff[100],
+			strMqtt_Inof.device_name, 100);
 		write_config();
 	} else {
 		// 从FLASH加载配置
 		memcpy((unsigned char *)&Threshold,
 			(unsigned char *)&strConfig_info.config_buff[0],
 			sizeof(Threshold));
+		memcpy(strMqtt_Inof.device_name,
+			(unsigned char *)&strConfig_info.config_buff[100],
+			100);
 	}
 }

@@ -76,12 +76,15 @@ link_directories(${CMAKE_PROJECT_NAME} ${link_DIRS})
 set(USER_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/User")
 
 # 1. 递归搜索所有源文件 (.c, .cpp, .s, .S)
-file(GLOB_RECURSE USER_SOURCES 
+file(GLOB_RECURSE USER_SOURCES
     "${USER_BASE_DIR}/*.c"
     "${USER_BASE_DIR}/*.cpp"
     "${USER_BASE_DIR}/*.s"
     "${USER_BASE_DIR}/*.S"
 )
+
+# 排除旧的 mqttwifi 驱动目录
+list(FILTER USER_SOURCES EXCLUDE REGEX ".*mqttwifi/.*")
 
 # 2. 自动化获取头文件目录 (搜索所有包含 .h 的文件夹)
 file(GLOB_RECURSE USER_HEADERS "${USER_BASE_DIR}/*.h")

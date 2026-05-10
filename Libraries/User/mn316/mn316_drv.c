@@ -1,26 +1,31 @@
 #include "sys.h"
 #include "mn316_drv.h"
 
-/* MN316ȫ״̬ */
+/* MN316 global state */
 MN316_STR strMN316_info;
 MN316_RCV_STR strMN316_rcv;
 
-/* ATָб */
+/* AT command table */
 static MN316_CMD_TYPE strMN316_cmd[5];
 
-/* ڽ*/
+/* Receive buffer and flags */
 static unsigned char is_new_CMD_rx = 0;
 static unsigned char CMD_rx_buff[400];
 
-/* ڷʱ */
+/* Publish timer */
 static unsigned int last_pub_cnt = 0;
 
-/************************************
-send_data_to_dev
-ܣͨUSART2ݵMN316ģ
-data-зݵָ룻len-ݳ
-ֵ޷ֵ
-************************************/
+/*
+ * get_sys_tick - Get system tick in milliseconds
+ */
+unsigned int get_sys_tick(void)
+{
+    return sysTickUptime;
+}
+
+/*
+ * send_data_to_dev - Send data to MN316 module via USART2
+ */
 void send_data_to_dev(char *data, unsigned short len)
 {
     unsigned int i;
@@ -32,12 +37,9 @@ void send_data_to_dev(char *data, unsigned short len)
     }
 }
 
-/************************************
-USART_rcv_ch
-ܣսյֽ뻺
-ch-յֽڣstr_rcv-ջṹָ
-ֵ޷ֵ
-************************************/
+/*
+ * USART_rcv_ch - Store received byte into buffer
+ */
 void USART_rcv_ch(unsigned char ch, MN316_RCV_STR *str_rcv)
 {
     if(str_rcv->rcv_cnt < MN316_RX_BUFF_SIZE)
@@ -48,12 +50,9 @@ void USART_rcv_ch(unsigned char ch, MN316_RCV_STR *str_rcv)
     }
 }
 
-/************************************
-USARTx_RCVHandler
-ܣͨUSARTжϴ
-USARTX-ڱָ
-ֵ޷ֵ
-************************************/
+/*
+ * USARTx_RCVHandler - Generic USART receive interrupt handler
+ */
 void USARTx_RCVHandler(USART_TypeDef *USARTX)
 {
     unsigned char ch;
@@ -68,22 +67,18 @@ void USARTx_RCVHandler(USART_TypeDef *USARTX)
     }
 }
 
-/************************************
-USART2_IRQHandler
-ܣUSART2жϷ
-ֵ޷ֵ
-************************************/
+/*
+ * USART2_IRQHandler - USART2 interrupt service routine
+ */
 void USART2_IRQHandler(void)
 {
     USARTx_RCVHandler(USART2);
 }
 
-/************************************
-write_cmd
-ܣATָȴӦԵ
-strCMD-ָָ
-ֵ1-ɹ2-ٴľʧܣ0-
-************************************/
+/*
+ * write_cmd - Send AT command and wait for response
+ * Return: 1=success, 2=retry exhausted, 0=processing
+ */
 static unsigned char write_cmd(MN316_CMD_TYPE *strCMD)
 {
     char *pStr;
@@ -124,13 +119,12 @@ static unsigned char write_cmd(MN316_CMD_TYPE *strCMD)
     return 0;
 }
 
-/************************************
-MN316_init
-ܣʼATָб
-ֵ޷ֵ
-************************************/
+/*
+ * MN316_init - Initialize AT command table for MN316
+ */
 void MN316_init(void)
 {
+    /* AT+MQTTCFG command */
     sprintf(strMN316_cmd[1].cmd,
             "AT+MQTTCFG=\"" MN316_MQTT_SERVER "\","
             "%d,"
@@ -144,27 +138,29 @@ void MN316_init(void)
     strMN316_cmd[1].wait_time = 3000;
     strMN316_cmd[1].retry_cnt = 3;
 
+    /* AT+MQTTOPEN command */
     strcpy(strMN316_cmd[2].cmd, "AT+MQTTOPEN=1,1,0,0,0,\"\",\"\"\r\n");
     strcpy(strMN316_cmd[2].respond, "OK");
     strMN316_cmd[2].wait_time = 5000;
     strMN316_cmd[2].retry_cnt = 3;
 
+    /* AT+MQTTSUB command */
     strcpy(strMN316_cmd[3].cmd, "AT+MQTTSUB=\"" MN316_SUB_TOPIC "\",0\r\n");
     strcpy(strMN316_cmd[3].respond, "OK");
     strMN316_cmd[3].wait_time = 3000;
     strMN316_cmd[3].retry_cnt = 3;
 
+    /* AT command (basic check) */
     strcpy(strMN316_cmd[0].cmd, "AT\r\n");
     strcpy(strMN316_cmd[0].respond, "OK");
     strMN316_cmd[0].wait_time = 2000;
     strMN316_cmd[0].retry_cnt = 3;
 }
 
-/************************************
-ֽתΪHEXַ(д)
-src-ԭʼݣlen-ݳȣdest-HEX
-ֵHEXַĳ
-************************************/
+/*
+ * ascii_to_hex - Convert binary data to HEX string (uppercase)
+ * Returns: length of HEX string written
+ */
 static unsigned short ascii_to_hex(const unsigned char *src, unsigned short len, char *dest)
 {
     static const char hex_chars[] = "0123456789ABCDEF";
@@ -177,11 +173,12 @@ static unsigned short ascii_to_hex(const unsigned char *src, unsigned short len,
     return len * 2;
 }
 
-/************************************
-MN316_publish_sensor_data
-ܣJSONʽݵMQTT
-ֵ޷ֵ
-************************************/
+/*
+ * MN316_publish_sensor_data - Publish sensor data as JSON via MQTT
+ * Sends in 2 packets (max 3 params each):
+ *   Packet 1: Temperature, Humidity, Lightness
+ *   Packet 2: Turbidity, pHValue
+ */
 void MN316_publish_sensor_data(void)
 {
     char json[MN316_JSON_MAX_LEN];
@@ -189,7 +186,7 @@ void MN316_publish_sensor_data(void)
     char at_cmd[512];
     unsigned short hex_len, json_len;
 
-    /* 第一包：Temperature, Humidity, Lightness (3个参数) */
+    /* Packet 1: Temperature, Humidity, Lightness (3 params) */
     json_len = sprintf(json,
                        "{\"id\":\"123\",\"version\":\"1.0\",\"params\":{\"Temperature\":{\"value\":%d},\"Humidity\":{\"value\":%d},\"Lightness\":{\"value\":%d}}}",
                        SensorData.WtrTempVal, SensorData.WtrLevelVal, SensorData.LightVal);
@@ -199,7 +196,7 @@ void MN316_publish_sensor_data(void)
             json_len, hex_buf);
     send_data_to_dev(at_cmd, strlen(at_cmd));
 
-    /* 第二包：Turbidity, pHValue (2个参数) */
+    /* Packet 2: Turbidity, pHValue (2 params) */
     json_len = sprintf(json,
                        "{\"id\":\"123\",\"version\":\"1.0\",\"params\":{\"Turbidity\":{\"value\":%d},\"pHValue\":{\"value\":%.1f}}}",
                        SensorData.TurbVal, SensorData.PHVal);
@@ -210,9 +207,9 @@ void MN316_publish_sensor_data(void)
     send_data_to_dev(at_cmd, strlen(at_cmd));
 }
 
-/************************************
-ܣյATӦؼ
-************************************/
+/*
+ * process_rx_buffer - Parse received AT response and handle commands
+ */
 static void process_rx_buffer(void)
 {
     if(get_sys_tick() - strMN316_rcv.rcv_trick_ms >= 20 && strMN316_rcv.rcv_cnt)
@@ -221,19 +218,23 @@ static void process_rx_buffer(void)
 
         if(strstr((char *)strMN316_rcv.buff, "Automatic"))
         {
+            oled_Clear();
             mode_selection = 0;
         }
         if(strstr((char *)strMN316_rcv.buff, "TimeFlag"))
         {
+            oled_Clear();
             mode_selection = 1;
         }
         if(strstr((char *)strMN316_rcv.buff, "ThresholdMODE"))
         {
             mode_selection = 2;
+            oled_Clear();
         }
         if(strstr((char *)strMN316_rcv.buff, "Manual"))
         {
             mode_selection = 3;
+            oled_Clear();
             System.Switch1 = System.Switch2 = System.Switch3 =
             System.Switch4 = System.Switch5 = System.Switch6 = System.Switch7 = 0;
         }
@@ -251,20 +252,20 @@ static void process_rx_buffer(void)
         if(strstr((char *)strMN316_rcv.buff, "Switch6OFF")) { mode_selection = 5; System.Switch6 = 0; }
         if(strstr((char *)strMN316_rcv.buff, "Switch7ON"))  { mode_selection = 6; System.Switch7 = 1; }
         if(strstr((char *)strMN316_rcv.buff, "Switch7OFF")) { mode_selection = 6; System.Switch7 = 0; }
-        if(strstr((char *)strMN316_rcv.buff, "WtrTempThresholdDown"))  { mode_selection = 0; Threshold.WtrTempThreshold -= 1; }
-        if(strstr((char *)strMN316_rcv.buff, "WtrTempThresholdAdd"))   { mode_selection = 0; Threshold.WtrTempThreshold += 1; }
-        if(strstr((char *)strMN316_rcv.buff, "WtrLevelThresholdDown")) { mode_selection = 1; Threshold.WtrLevelThreshold -= 1; }
-        if(strstr((char *)strMN316_rcv.buff, "WtrLevelThresholdAdd"))  { mode_selection = 1; Threshold.WtrLevelThreshold += 1; }
-        if(strstr((char *)strMN316_rcv.buff, "LightThresholdDown"))    { mode_selection = 2; Threshold.LightThreshold -= 10; }
-        if(strstr((char *)strMN316_rcv.buff, "LightThresholdAdd"))     { mode_selection = 2; Threshold.LightThreshold += 10; }
-        if(strstr((char *)strMN316_rcv.buff, "TurbThersholdDown"))     { mode_selection = 3; Threshold.TurbThreshold -= 10; }
-        if(strstr((char *)strMN316_rcv.buff, "TurbThersholdAdd"))      { mode_selection = 3; Threshold.TurbThreshold += 10; }
-        if(strstr((char *)strMN316_rcv.buff, "PHMaxDown"))  { mode_selection = 4; Threshold.PHMax -= 1; }
-        if(strstr((char *)strMN316_rcv.buff, "PHMaxAdd"))   { mode_selection = 4; Threshold.PHMax += 1; }
-        if(strstr((char *)strMN316_rcv.buff, "PHMinDown"))  { mode_selection = 5; Threshold.PHMin -= 1; }
-        if(strstr((char *)strMN316_rcv.buff, "PHMinAdd"))   { mode_selection = 5; Threshold.PHMin += 1; }
-        if(strstr((char *)strMN316_rcv.buff, "FeedMode"))   { TimeMode_Selection = 0; Threshold.FeedHour -= 1; }
-        if(strstr((char *)strMN316_rcv.buff, "OxMode"))     { TimeMode_Selection = 1; Threshold.FeedHour += 1; }
+        if(strstr((char *)strMN316_rcv.buff, "WtrTempThresholdDown"))  { oled_Clear(); mode_selection = 0; Threshold.WtrTempThreshold -= 1; }
+        if(strstr((char *)strMN316_rcv.buff, "WtrTempThresholdAdd"))   { oled_Clear(); mode_selection = 0; Threshold.WtrTempThreshold += 1; }
+        if(strstr((char *)strMN316_rcv.buff, "WtrLevelThresholdDown")) { oled_Clear(); mode_selection = 1; Threshold.WtrLevelThreshold -= 1; }
+        if(strstr((char *)strMN316_rcv.buff, "WtrLevelThresholdAdd"))  { oled_Clear(); mode_selection = 1; Threshold.WtrLevelThreshold += 1; }
+        if(strstr((char *)strMN316_rcv.buff, "LightThresholdDown"))    { oled_Clear(); mode_selection = 2; Threshold.LightThreshold -= 10; }
+        if(strstr((char *)strMN316_rcv.buff, "LightThresholdAdd"))     { oled_Clear(); mode_selection = 2; Threshold.LightThreshold += 10; }
+        if(strstr((char *)strMN316_rcv.buff, "TurbThersholdDown"))     { oled_Clear(); mode_selection = 3; Threshold.TurbThreshold -= 10; }
+        if(strstr((char *)strMN316_rcv.buff, "TurbThersholdAdd"))      { oled_Clear(); mode_selection = 3; Threshold.TurbThreshold += 10; }
+        if(strstr((char *)strMN316_rcv.buff, "PHMaxDown"))  { oled_Clear(); mode_selection = 4; Threshold.PHMax -= 1; }
+        if(strstr((char *)strMN316_rcv.buff, "PHMaxAdd"))   { oled_Clear(); mode_selection = 4; Threshold.PHMax += 1; }
+        if(strstr((char *)strMN316_rcv.buff, "PHMinDown"))  { oled_Clear(); mode_selection = 5; Threshold.PHMin -= 1; }
+        if(strstr((char *)strMN316_rcv.buff, "PHMinAdd"))   { oled_Clear(); mode_selection = 5; Threshold.PHMin += 1; }
+        if(strstr((char *)strMN316_rcv.buff, "FeedMode"))   { oled_Clear(); TimeMode_Selection = 0; Threshold.FeedHour -= 1; }
+        if(strstr((char *)strMN316_rcv.buff, "OxMode"))     { oled_Clear(); TimeMode_Selection = 1; Threshold.FeedHour += 1; }
         if(strstr((char *)strMN316_rcv.buff, "HourDown"))   { if(TimeMode_Selection == 0) Threshold.FeedHour -= 1; else Threshold.OxHour -= 1; }
         if(strstr((char *)strMN316_rcv.buff, "HourAdd"))    { if(TimeMode_Selection == 0) Threshold.FeedHour += 1; else Threshold.OxHour += 1; }
         if(strstr((char *)strMN316_rcv.buff, "MinuteDown")) { if(TimeMode_Selection == 0) Threshold.FeedMinute -= 1; else Threshold.OxMinute -= 1; }
@@ -279,17 +280,16 @@ static void process_rx_buffer(void)
     }
 }
 
-/************************************
-MN316_run_handle
-ܣMN316״̬ATָ̺MQTTͨ
-ֵ޷ֵ
-************************************/
+/*
+ * MN316_run_handle - MN316 main state machine
+ * States: NULL -> AT_CHECK -> MQTT_CFG -> MQTT_OPEN -> MQTT_SUB -> READY
+ */
 void MN316_run_handle(void)
 {
     unsigned char ret;
     static unsigned int init_tick = 0;
 
-    /* ʼ״̬ѡATָ */
+    /* Initial state: start init sequence */
     if(strMN316_info.Net_stu == MN316_STATE_NULL)
     {
         MN316_init();
@@ -297,7 +297,7 @@ void MN316_run_handle(void)
         init_tick = get_sys_tick();
     }
 
-    /* ڳʼǰȴ500msģϵ */
+    /* State 1: AT check - wait 500ms for module to boot first */
     if(strMN316_info.Net_stu == MN316_STATE_AT_CHECK)
     {
         if(get_sys_tick() - init_tick < 500) return;
@@ -312,6 +312,7 @@ void MN316_run_handle(void)
             strMN316_info.Net_stu = MN316_STATE_NULL;
         }
     }
+    /* State 2: MQTT config */
     else if(strMN316_info.Net_stu == MN316_STATE_MQTT_CFG)
     {
         ret = write_cmd(&strMN316_cmd[1]);
@@ -324,6 +325,7 @@ void MN316_run_handle(void)
             strMN316_info.Net_stu = MN316_STATE_NULL;
         }
     }
+    /* State 3: MQTT open (connect) */
     else if(strMN316_info.Net_stu == MN316_STATE_MQTT_OPEN)
     {
         ret = write_cmd(&strMN316_cmd[2]);
@@ -337,6 +339,7 @@ void MN316_run_handle(void)
             strMN316_info.Net_stu = MN316_STATE_NULL;
         }
     }
+    /* State 4: MQTT subscribe */
     else if(strMN316_info.Net_stu == MN316_STATE_MQTT_SUB)
     {
         ret = write_cmd(&strMN316_cmd[3]);
@@ -351,17 +354,20 @@ void MN316_run_handle(void)
             strMN316_info.Net_stu = MN316_STATE_NULL;
         }
     }
-    /* ӳɹ״̬ */
+    /* State 5: Ready - normal operation */
     else if(strMN316_info.Net_stu == MN316_STATE_READY)
     {
+        /* Publish sensor data every 1 second */
         if(get_sys_tick() - last_pub_cnt >= 1000)
         {
             last_pub_cnt = get_sys_tick();
             MN316_publish_sensor_data();
         }
 
+        /* Process received data from server */
         process_rx_buffer();
 
+        /* Disconnect detection: 30s idle means reconnect */
         strMN316_info.rcv_idle_cnt = (get_sys_tick() - strMN316_rcv.rcv_trick_ms) / 1000;
         if(strMN316_info.rcv_idle_cnt > 30)
         {
